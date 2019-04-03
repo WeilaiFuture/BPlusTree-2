@@ -28,6 +28,7 @@ class Node{
     public:
 	    NODE_TYPE nodeType;
 	    int keyNum;
+      Node* parentNode;
 	    KeyType arrKeys[MAXNUM_KEY];
 
 };

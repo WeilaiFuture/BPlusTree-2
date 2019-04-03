@@ -3,16 +3,20 @@
 Node::Node(){
     nodeType = LEAF;
     keyNum = 0;
+    parentNode = NULL;
 }
 Node::~Node(){}
 
 int Node::getKeyIndex(KeyType key){
+    if(keyNum == 0){
+        return 0;
+    }
     int left = 0;
     int right = keyNum-1;
     int current;
     while(left != right){
         current = (left+right)/2;
-        if(key > arrKeys[current]){
+        if(key >= arrKeys[current]){
             left = current+1;
         }else{
             right = current;

@@ -31,7 +31,7 @@ class BPlusTree{
 			void recursiveInsert(Node* parentNode, KeyType key, const DataType& data);
 
 		public:
-		  Node* root;
+		  static Node* root;
 	    LeafNode* dataHead;
 		  KeyType maxKey;  // B+树中的最大键
 

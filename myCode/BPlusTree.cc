@@ -1,6 +1,8 @@
 #include "BPlusTree.h"
 #include "InternalNode.h"
 
+Node* BPlusTree::root = NULL;
+
 BPlusTree::BPlusTree(){}
 BPlusTree::~BPlusTree(){}
 
@@ -63,8 +65,15 @@ bool BPlusTree::recursiveSearch(Node *pNode, KeyType key){
     }
 }
 void BPlusTree::recursiveInsert(Node* parentNode, KeyType key, const DataType& data){
+    Node* node = parentNode;
     // 判断是否时叶子节点，若是，则直接插入
-    if(parentNode->nodeType == LEAF){
-        ((LeafNode*)parentNode)->insert(key, data);
+    if(node->nodeType == LEAF){
+        ((LeafNode*)node)->insert(key, data);
+    }else if(node->nodeType == INTERNAL){
+        node = ((InternalNode*)node)->findChildByKey(key);
+        recursiveInsert(node, key, data);
+    }else{
+        cout << "error:BPlusTree::recursiveInsert" << endl;
+        return;
     }
 }

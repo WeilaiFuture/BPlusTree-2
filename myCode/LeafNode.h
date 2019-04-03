@@ -16,7 +16,7 @@ class LeafNode: public Node{
       // 从结点中移除键值
       void removeKey(int keyIndex, int childIndex);
       // 分裂结点
-      void split(LeafNode* newLeafNode);
+      KeyType split(LeafNode* newLeafNode);
       // 合并结点
       void mergeChild(Node* parentNode, Node* childNode, int keyIndex);
       // 清空结点，同时会清空结点所包含的子树结点
@@ -27,9 +27,9 @@ class LeafNode: public Node{
       int getChildIndex(KeyType key, int keyIndex);
 
     public:
-      LeafNode* leftSibling;
+      // LeafNode* leftSibling;
 	    LeafNode* rightSibling;
-      InternalNode* parentNode;
+      
 	    DataType datas[MAXNUM_LEAF];
 
 };
