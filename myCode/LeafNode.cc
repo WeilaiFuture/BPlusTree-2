@@ -2,12 +2,14 @@
 #include "BPlusTree.h"
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <iostream>
 using namespace std;
 
 LeafNode::LeafNode(){
     nodeType = LEAF;
     rightSibling = NULL;
+    leftSibling = NULL;
 }
 LeafNode::~LeafNode(){}
 
@@ -46,8 +48,40 @@ void LeafNode::insert(KeyType key, const DataType& data){
     }
 }
 
-void LeafNode::removeKey(int keyIndex, int childIndex){
+void LeafNode::removeKey(int keyIndex){
+    KeyType key = arrKeys[keyIndex];
+    for(int i = keyIndex; i < keyNum-1; i++){
+        arrKeys[i] = arrKeys[i+1];
+        datas[i] = datas[i+1];
+    }
+    arrKeys[keyNum-1] = -1;
+    keyNum--;
 
+    if(parentNode == NULL){
+        return;
+    }
+    // 检查父节点是否有该key，并替换
+    checkKeyInParentNode(key, arrKeys[0]);
+
+    // 判断keyNum是否小于MAXNUM_KEY/2,若小于，则向右邻节点借一个key或合并
+    if(keyNum < MAXNUM_KEY/2){
+        // 判断是否是最右节点
+        if(((InternalNode*)parentNode)->childs[parentNode->keyNum] == this){
+            // 判断左邻孩子节点keyNum是否等于MAXNUM_KEY,若等于，则将两个节点合并
+            if(leftSibling->keyNum == MAXNUM_KEY/2){
+                merge(leftSibling, this);
+            }else{
+                borrowFromLeftNode();
+            }
+        }else{
+            // 判断右邻孩子节点keyNum是否等于MAXNUM_KEY,若等于，则将两个节点合并
+            if(rightSibling->keyNum == MAXNUM_KEY/2){
+                merge(this, rightSibling);
+            }else{
+                borrowFromRightNode();
+            }
+        }
+    }
 }
 KeyType LeafNode::split(LeafNode* newLeafNode){
     // 找到中间位置的key
@@ -71,19 +105,108 @@ KeyType LeafNode::split(LeafNode* newLeafNode){
     keyNum = MAXNUM_KEY/2;
 
     // 将左右孩子节点串起来
+    if(rightSibling != NULL){
+        newLeafNode->rightSibling = rightSibling;
+        rightSibling->leftSibling = newLeafNode;
+    }
     rightSibling = newLeafNode;
+    newLeafNode->leftSibling = this;
     return middleKey;
 }
+
+void LeafNode::merge(LeafNode* lNode, LeafNode* rNode){
+    for(int i = 0; i < rNode->keyNum; i++){
+        lNode->arrKeys[lNode->keyNum+i] = rNode->arrKeys[i];
+        lNode->datas[lNode->keyNum+i] = rNode->arrKeys[i];
+    }
+
+    lNode->keyNum += rNode->keyNum;
+    // 重新链接左右叶子节点
+    if(rNode->rightSibling == NULL){
+        lNode->rightSibling = NULL;
+    }else{
+        lNode->rightSibling = rNode->rightSibling;
+        rNode->rightSibling->leftSibling = lNode;
+    }
+    // -----唯有此处连接到内节点的删除操作------
+    parentNode->removeKey(rNode->arrKeys[0]);
+    // ------------------------------------
+    free(rNode);
+}
+
+void LeafNode::mergeRightLeafNode(){
+    for(int i = 0; i < rightSibling->keyNum; i++){
+        arrKeys[keyNum+i] = rightSibling->arrKeys[i];
+        datas[keyNum+i] = rightSibling->arrKeys[i];
+    }
+    // 寻找右邻节点的第一个key在parentNode中的位置
+    int rightParentKeyIndex = rightSibling->parentNode->getKeyIndex(rightSibling->arrKeys[0]);
+    // 如果第一个key等于寻找到的key值下标，则将该key去掉，以及该keyIndex右边的孩子节点去掉
+    if(rightSibling->arrKeys[0] == rightSibling->parentNode->arrKeys[rightParentKeyIndex]){
+        rightSibling->parentNode->removeKey(rightParentKeyIndex);
+    }else{
+        rightSibling->parentNode->removeKey(rightParentKeyIndex-1);
+    }
+    keyNum += rightSibling->keyNum;
+    LeafNode* rNode = rightSibling;
+    if(rNode->rightSibling == NULL){
+        rightSibling = NULL;
+    }else{
+        rightSibling = rNode->rightSibling;
+        rNode->rightSibling->leftSibling = this;
+    }
+    free(rNode);
+}
+
 void LeafNode::mergeChild(Node* parentNode, Node* childNode, int keyIndex){
     
 }
 void LeafNode::clear(){
     
 }
+
+void LeafNode::borrowFromRightNode(){
+    arrKeys[keyNum] = rightSibling->arrKeys[0];
+    // 将右邻节点的key向前移动一个单位
+    for(int i = 0; i < rightSibling->keyNum-1; i++){
+        rightSibling->arrKeys[i] = rightSibling->arrKeys[i+1];
+        rightSibling->datas[i] = rightSibling->datas[i+1];
+    }
+    rightSibling->checkKeyInParentNode(arrKeys[keyNum], rightSibling->arrKeys[0]);
+    keyNum++;
+    rightSibling->keyNum--;
+}
+
+void LeafNode::borrowFromLeftNode(){
+    for(int i = keyNum; i > 0; i++){
+        arrKeys[i] = arrKeys[i-1];
+        datas[i] = datas[i-1];
+    }
+    arrKeys[0] = leftSibling->arrKeys[keyNum-1];
+    datas[0] = leftSibling->arrKeys[keyNum-1];
+    leftSibling->arrKeys[keyNum-1] = -1;
+    leftSibling->arrKeys[keyNum-1] = -1;
+    leftSibling->keyNum--;
+    keyNum++;
+    checkKeyInParentNode(arrKeys[1], arrKeys[0]);
+}
+
 void LeafNode::borrowFrom(Node* destNode, Node* parentNode, int keyIndex, SIBLING_DIRECTION d){
     
 }
 int LeafNode::getChildIndex(KeyType key, int keyIndex){
 
     return keyIndex;
+}
+
+void LeafNode::checkKeyInParentNode(KeyType key, KeyType newKey){
+    // 查找该key是否是内节点的索引。 另一种方式可以在搜索key的时候将keyIndex的数组传过来，记录每一层该key 的位置，数组大小为树的高度
+    int parentKeyIndex = parentNode->getKeyIndex(key);
+    // 如果父节点存在该key，则将该key换为移动后叶子节点的第一个key
+    if(key == parentNode->arrKeys[parentKeyIndex]){   
+        parentNode->arrKeys[parentKeyIndex] = newKey;
+    }else{
+        // 向上递归查询该key是否作为索引,若是，则替换
+        ((InternalNode*)parentNode)->searchAndChangeKey(key, newKey);
+    }
 }

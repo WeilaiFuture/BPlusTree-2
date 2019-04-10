@@ -12,9 +12,16 @@ void aaa(Node* node){
 int main(int argc, char const *argv[])
 {
     BPlusTree* bt = new BPlusTree();
-    for(int i = 0; i < 32; i++){
+    for(int i = 0; i < 35; i++){
         bt->insert(i, i);
     }
+
+    // bt->remove(8);
+    bt->remove(9);
+    // bt->remove(10);
+    // bt->remove(21);
+    // bt->remove(12);
+
     Node* root = bt->root;
 
     aaa(root);

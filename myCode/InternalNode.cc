@@ -2,6 +2,7 @@
 #include "BPlusTree.h"
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <iostream>
 using namespace std;
 
@@ -30,6 +31,7 @@ void InternalNode::insert(KeyType key, Node* childNode){
         KeyType middleKey = split(newInternalNode); 
         // 判断新key值的在原arrKeys中的位置，决定middleKey的值
         if(key < arrKeys[keyNum-1]){
+            newInternalNode->childs[0] = childs[keyNum];
             middleKey = arrKeys[keyNum-1];
             arrKeys[keyNum-1] = -1;
             keyNum--;
@@ -103,16 +105,53 @@ void InternalNode::insert(KeyType key, Node* childNode){
 Node* InternalNode::findChildByKey(KeyType key){
     int childIndex = getChildIndex(key, getKeyIndex(key));
     return childs[childIndex];
-    // if(node == NULL){
-    //     cout << "node == NULL" << endl;
-    // }else{
-    //     cout << "node->keys[keyNum-1] == " << node->arrKeys[keyNum-1] << endl;
-    // }
 }
 
+void InternalNode::removeKey(KeyType key){
+    // 此key必在该内节点上,故该keyIndex必为该key所在下标
+    int keyIndex = getKeyIndex(key);
+    for(int i = keyIndex; i < keyNum-1; i++){
+        arrKeys[i] = arrKeys[i+1];
+        childs[i+1] = childs[i+2];
+    }
+    keyNum--;
 
-void InternalNode::removeKey(int keyIndex, int childIndex){
+    // 若该节点的keyNum为0，首先说明此节点一定是根节点，其次该节点只有一个孩子节点，设置为新的根节点，free掉该节点
+    if(keyNum == 0){
+        BPlusTree::root = childs[0];
+        free(this);
+        return;
+    }
 
+    // 若父节点为空，说明为根节点
+    if(parentNode == NULL){
+        return;
+    }
+
+    // 若keyNum < MAXNUM_KEY/2，先向右邻节点借一个key，或者合并，否则向左邻节点
+    if(keyNum < MAXNUM_KEY/2){
+        // 找到相邻的右节点，若该节点为最右节点，则找左邻节点
+        int parentKeyIndex = parentNode->getKeyIndex(arrKeys[0]);
+        int childIndex = parentNode->getChildIndex(arrKeys[0], parentKeyIndex);
+
+        InternalNode* bNode = NULL;
+        // 如果该节点为最右节点
+        if(childIndex == parentNode->keyNum){
+            bNode = (InternalNode*)(((InternalNode*)parentNode)->childs[childIndex-1]);
+            if(bNode->keyNum == MAXNUM_KEY/2){
+                merge(bNode, this, parentKeyIndex);
+            }else{
+                borrowFromLeftNode(this, bNode, parentKeyIndex);
+            }
+        }else{
+            bNode = (InternalNode*)(((InternalNode*)parentNode)->childs[childIndex+1]);
+            if(bNode->keyNum == MAXNUM_KEY/2){
+                merge(this, bNode, parentKeyIndex);
+            }else{
+                borrowFromRightNode(this, bNode, parentKeyIndex);
+            }
+        }
+    }
 }
 int InternalNode::split(Node* newInternalNode){
     // 找到中间位置的key
@@ -154,13 +193,109 @@ void InternalNode::mergeChild(Node* parentNode, Node* childNode, int keyIndex){
 void InternalNode::clear(){
     
 }
+
+void InternalNode::borrowFromLeftNode(InternalNode* rightNode, InternalNode* leftNode, int parentKeyIndex){
+    // 将rightNode的key向后移动一个单位
+    for(int i = rightNode->keyNum; i > 0; i--){
+        rightNode->arrKeys[i] = rightNode->arrKeys[i-1];
+        rightNode->childs[i+1] = rightNode->childs[i];
+    }
+    rightNode->childs[1] = rightNode->childs[0];
+    // 将左节点的最后一个孩子节点移动到右节点的第一个孩子节点
+    rightNode->childs[0] = leftNode->childs[leftNode->keyNum];
+    // 将父节点的该index上的key移动到右节点的第一个key
+    rightNode->arrKeys[0] = parentNode->arrKeys[parentKeyIndex];
+    // 将左节点的最后一个key移动到父节点的该index位置
+    parentNode->arrKeys[parentKeyIndex] = leftNode->arrKeys[leftNode->keyNum-1];
+    rightNode->keyNum++;
+    leftNode->keyNum--;
+}
+
+void InternalNode::borrowFromRightNode(InternalNode* leftNode, InternalNode* rightNode, int parentKeyIndex){
+    leftNode->arrKeys[leftNode->keyNum] = parentNode->arrKeys[parentKeyIndex];
+    leftNode->childs[leftNode->keyNum+1] = rightNode->childs[0];
+    parentNode->arrKeys[parentKeyIndex] = rightNode->arrKeys[0];
+    // 将右节点向前移动一个单位
+    for(int i = 0; i < rightNode->keyNum-1; i++){
+        rightNode->arrKeys[i] = rightNode->arrKeys[i+1];
+        rightNode->childs[i] = rightNode->childs[i+1];
+    }
+    rightNode->childs[rightNode->keyNum-1] = rightNode->childs[rightNode->keyNum];
+    leftNode->keyNum++;
+    rightNode->keyNum--;
+}
+
 void InternalNode::borrowFrom(Node* destNode, Node* parentNode, int keyIndex, SIBLING_DIRECTION d){
     
 }
 int InternalNode::getChildIndex(KeyType key, int keyIndex){
-    if(key > arrKeys[keyIndex]){
+    if(key >= arrKeys[keyIndex]){
         return keyIndex+1;
     }else{
         return keyIndex;
     }
+}
+
+void InternalNode::handleMergeOrBorrow(InternalNode* targetNode, InternalNode* fromNode, int keyIndex, int flag){
+    if(flag == 1){
+        if(targetNode->keyNum == MAXNUM_KEY/2){
+            merge(targetNode, fromNode, keyIndex);
+        }else{
+            borrow(targetNode, fromNode, keyIndex);
+        }
+    }else{
+        if(fromNode->keyNum == MAXNUM_KEY/2){
+            merge(targetNode, fromNode, keyIndex);
+        }else{
+            borrow(targetNode, fromNode, keyIndex);
+        }
+    }
+    
+}
+
+void InternalNode::borrow(InternalNode* targetNode, InternalNode* fromNode, int parentKeyIndex){
+    // 将父节点对应的keyIndex的key放入左孩子，右孩子的第一个key替换原来父节点上的key，右节点的第一个孩子移动到左节点的最后一个孩子节点，右节点向左移动一个单位
+    targetNode->arrKeys[targetNode->keyNum] = targetNode->parentNode->arrKeys[parentKeyIndex];
+    targetNode->childs[targetNode->keyNum+1] = fromNode->childs[0];
+    targetNode->parentNode->arrKeys[parentKeyIndex] = fromNode->arrKeys[0];
+    for(int i = 0; i < fromNode->keyNum-1; i++){
+        fromNode->arrKeys[i] = fromNode->arrKeys[i+1];
+        fromNode->childs[i] = fromNode->childs[i+1];
+    }
+    fromNode->childs[fromNode->keyNum-1] = fromNode->childs[fromNode->keyNum];
+    targetNode->keyNum++;
+    fromNode->keyNum--;
+}
+
+void InternalNode::merge(InternalNode* leftNode, InternalNode* rightNode, int parentKeyIndex){
+    // 将父节点index位置上的key添加到左节点的最后
+    leftNode->arrKeys[leftNode->keyNum] = parentNode->arrKeys[parentKeyIndex];
+    leftNode->keyNum++;
+    // 将右节点合并到左节点
+    for(int i = 0; i < rightNode->keyNum; i++){
+        leftNode->arrKeys[leftNode->keyNum+i] = rightNode->arrKeys[i];
+        leftNode->childs[leftNode->keyNum+1+i] = rightNode->childs[i];
+    }
+    leftNode->childs[leftNode->keyNum+rightNode->keyNum] = rightNode->childs[rightNode->keyNum];
+    leftNode->keyNum += rightNode->keyNum;
+    free(rightNode);
+
+    // 删除父节点上该index位置的key
+    // -----此处唯一在内节点调用删除------
+    parentNode->removeKey(parentNode->arrKeys[parentKeyIndex]);
+    // -------------------------------
+}
+
+void InternalNode::searchAndChangeKey(KeyType key, KeyType newKey){
+    if(parentNode == NULL){
+        return;
+    }else{
+        int keyIndex = parentNode->getKeyIndex(key);
+        if(parentNode->arrKeys[keyIndex] == key){
+            parentNode->arrKeys[keyIndex] = newKey;
+        }else{
+            ((InternalNode*)parentNode)->searchAndChangeKey(key, newKey);
+        }
+    }
+    
 }

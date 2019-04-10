@@ -13,7 +13,7 @@ class Node{
 
       // 纯虚函数，定义接口
       // 从结点中移除键值
-      virtual void removeKey(int keyIndex, int childIndex)=0;
+      virtual void removeKey(int keyIndex)=0;
       // 分裂结点
       // virtual void split()=0;
       // 合并结点
