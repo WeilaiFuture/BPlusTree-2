@@ -16,11 +16,13 @@ int main(int argc, char const *argv[])
         bt->insert(i, i);
     }
 
-    // bt->remove(8);
+    bt->remove(8);
     bt->remove(9);
-    // bt->remove(10);
+    bt->remove(10);
     // bt->remove(21);
-    // bt->remove(12);
+    bt->remove(12);
+    // bt->remove(13);
+    // bt->remove(14);
 
     Node* root = bt->root;
 
