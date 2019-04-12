@@ -51,9 +51,6 @@ bool BPlusTree::remove(KeyType key){
     lNode->removeKey(keyIndex);
     return true;
 }
-bool BPlusTree::update(KeyType oldKey, KeyType newKey){
-    return true;
-}
 bool BPlusTree::search(KeyType key){
     return recursiveSearch(root, key);
 }
@@ -61,13 +58,58 @@ LeafNode* BPlusTree::search(KeyType key, int& keyIndex){
     return recursiveSearch(root, key, keyIndex);
 }
 void BPlusTree::clear(){
-    
+    if(root != NULL){
+        root->clear();
+        delete root;
+    }
 }
 void BPlusTree::print(){
-
+    if(root == NULL){
+        return;
+    }
+    NodeList *nodeList = new NodeList;
+    NodeList *tail, *head, *p;
+    nodeList->node = root;
+    nodeList->next = NULL;
+    nodeList->isNewLine = 1;
+    tail = nodeList;
+    head = nodeList;
+    p = nodeList;
+    while(p != NULL){
+        cout << "[";
+        for(int i = 0; i < p->node->keyNum; i++){
+            cout << " " << p->node->arrKeys[i];
+        }
+        cout << " ]";
+        if(p->isNewLine == 1){
+            cout << endl;
+        }
+        if(p->node->nodeType == INTERNAL){
+            for(int i = 0; i < p->node->keyNum+1; i++){
+                NodeList *n = new NodeList;
+                n->node = ((InternalNode*)p->node)->childs[i];
+                n->next = NULL;
+                if(i == p->node->keyNum && p->isNewLine == 1){
+                    n->isNewLine = 1;
+                }else{
+                    n->isNewLine = 0;
+                }
+                tail->next = n;
+                tail = tail->next;
+            }
+        }
+        head = p;
+        p = p->next;
+        delete head;
+    }
 }
-void BPlusTree::printData(){
-    
+DataType* BPlusTree::select(KeyType key){
+    LeafNode* lNode;
+    int keyIndex;
+    if((lNode = search(key, keyIndex)) == NULL){
+        return NULL;
+    }
+    return &(lNode->datas[keyIndex]);
 }
 
 // -------private----------
@@ -116,18 +158,6 @@ void BPlusTree::recursiveInsert(Node* parentNode, KeyType key, const DataType& d
         recursiveInsert(node, key, data);
     }else{
         cout << "error:BPlusTree::recursiveInsert" << endl;
-        return;
-    }
-}
-void BPlusTree::recursiveRemove(KeyType key, Node* node, int& keyIndex){
-    if(node->nodeType == LEAF){
-        cout << "keyIndex = " << keyIndex << endl;
-        node->removeKey(keyIndex);
-    }else if(node->nodeType == INTERNAL){
-        node = ((InternalNode*)node)->findChildByKey(key);
-        recursiveRemove(key, node, keyIndex);
-    }else{
-        cout << "error:BPlusTree::recursiveRemove" << endl;
         return;
     }
 }

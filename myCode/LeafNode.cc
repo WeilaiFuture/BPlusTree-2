@@ -134,35 +134,11 @@ void LeafNode::merge(LeafNode* lNode, LeafNode* rNode){
     free(rNode);
 }
 
-void LeafNode::mergeRightLeafNode(){
-    for(int i = 0; i < rightSibling->keyNum; i++){
-        arrKeys[keyNum+i] = rightSibling->arrKeys[i];
-        datas[keyNum+i] = rightSibling->arrKeys[i];
-    }
-    // 寻找右邻节点的第一个key在parentNode中的位置
-    int rightParentKeyIndex = rightSibling->parentNode->getKeyIndex(rightSibling->arrKeys[0]);
-    // 如果第一个key等于寻找到的key值下标，则将该key去掉，以及该keyIndex右边的孩子节点去掉
-    if(rightSibling->arrKeys[0] == rightSibling->parentNode->arrKeys[rightParentKeyIndex]){
-        rightSibling->parentNode->removeKey(rightParentKeyIndex);
-    }else{
-        rightSibling->parentNode->removeKey(rightParentKeyIndex-1);
-    }
-    keyNum += rightSibling->keyNum;
-    LeafNode* rNode = rightSibling;
-    if(rNode->rightSibling == NULL){
-        rightSibling = NULL;
-    }else{
-        rightSibling = rNode->rightSibling;
-        rNode->rightSibling->leftSibling = this;
-    }
-    free(rNode);
-}
-
-void LeafNode::mergeChild(Node* parentNode, Node* childNode, int keyIndex){
-    
-}
 void LeafNode::clear(){
-    
+    // if data is pointer
+    // for(int i = 0; i < keyNum; i++){
+    //     delete datas[i];
+    // }
 }
 
 void LeafNode::borrowFromRightNode(){
@@ -191,11 +167,7 @@ void LeafNode::borrowFromLeftNode(){
     checkKeyInParentNode(arrKeys[1], arrKeys[0]);
 }
 
-void LeafNode::borrowFrom(Node* destNode, Node* parentNode, int keyIndex, SIBLING_DIRECTION d){
-    
-}
 int LeafNode::getChildIndex(KeyType key, int keyIndex){
-
     return keyIndex;
 }
 

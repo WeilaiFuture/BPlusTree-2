@@ -14,14 +14,8 @@ class Node{
       // 纯虚函数，定义接口
       // 从结点中移除键值
       virtual void removeKey(int keyIndex)=0;
-      // 分裂结点
-      // virtual void split()=0;
-      // 合并结点
-      virtual void mergeChild(Node* parentNode, Node* childNode, int keyIndex)=0;
       // 清空结点，同时会清空结点所包含的子树结点
       virtual void clear()=0;
-      // 从兄弟结点中借一个键值
-      virtual void borrowFrom(Node* destNode, Node* parentNode, int keyIndex, SIBLING_DIRECTION d)=0;
       // 根据键值获取孩子结点指针下标
       virtual int getChildIndex(KeyType key, int keyIndex)=0;
     
