@@ -13,7 +13,7 @@ int main(int argc, char const *argv[])
 {
     BPlusTree* bt = new BPlusTree();
     
-    for(int i = 0; i < 60; i++){
+    for(int i = 60; i > 0; i--){
         bt->insert(i, i);
     }
 

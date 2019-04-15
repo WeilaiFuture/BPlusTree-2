@@ -59,33 +59,12 @@ void InternalNode::insert(KeyType key, Node* childNode){
             keyNum++;
             return;
         }
-        if(keyNum == 1){
-            if(arrKeys[0] > key){
-                arrKeys[1] = arrKeys[0];
-                arrKeys[0] = key;
-                childs[2] = childs[1];
-                if(childs[0]->arrKeys[0] > key){
-                    childs[1] = childs[0];
-                    childs[0] = childNode;
-                }else{
-                    childs[1] = childNode;
-                }
-            }else{
-                arrKeys[1] = key;
-                childs[2] = childNode;
-            }
-            keyNum++;
-            return;
-        }
         // 找到key值下标
         int keyIndex = getKeyIndex(key);
+        // 说明此时key为最大
         if(key > arrKeys[keyIndex]){
-            for(int i = keyNum; i > keyIndex; i--){
-                arrKeys[i] = arrKeys[i-1];
-                childs[i+1] = childs[i];
-            }
-            arrKeys[keyIndex+1] = key;
-            childs[keyIndex+2] = childNode;
+            arrKeys[keyNum] = key;
+            childs[keyNum+1] = childNode;
         }else{
             for(int i = keyNum; i >= keyIndex; i--){
                 arrKeys[i] = arrKeys[i-1];

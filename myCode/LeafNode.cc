@@ -28,8 +28,10 @@ void LeafNode::insert(KeyType key, const DataType& data){
         }
         // 分裂叶子节点，返回中间key值,新叶子节点为右边
         KeyType middleKey = split(newLeafNode);
+        // ------此处唯一连接父节点------
         // 将中间的key加入父节点中
         ((InternalNode*)parentNode)->insert(middleKey, newLeafNode);
+        // ---------------------------
         // 判断新需要插入的key应该属于哪个节点
         if(key < middleKey){
             insert(key, data);
